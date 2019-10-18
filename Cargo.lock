@@ -118,7 +118,7 @@ version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "rChip8"
+name = "r-chip8"
 version = "0.1.0"
 dependencies = [
  "minifb 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
