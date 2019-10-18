@@ -1,0 +1,6 @@
+[package]
+name = "r-chip8"
+version = "0.1.0"
+
+[dependencies]
+minifb = "0.13"
