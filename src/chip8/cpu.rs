@@ -62,9 +62,10 @@ impl Cpu
 	// 	// self.specification.from(self.get_opcode())
 	// }
 	
-	pub fn get_opcode(&self) 
+	pub fn get_opcode(&self) -> u32
 	{
-		(self.memory[self.program_counter]<<8) as u32 + self.memory[self.program_counter+1]  as u32;
+		return  ((self.memory[self.program_counter as usize    ] as u32 ) << 16) 
+		       | (self.memory[self.program_counter as usize + 1]  as u32);
 	}
 	
 	pub fn load(&mut self,rom:&Vec<u8>)
@@ -72,7 +73,7 @@ impl Cpu
 		self.reset();
 		for i in 0..rom.len()/2
 		{
-			self.memory[i] = rom[2*i] << 8 + rom[2*i+1]
+			self.memory[i] = (rom[2*i] as u16) << 8 | rom[2*i+1] as u16;
 		}			
 	}
 	
