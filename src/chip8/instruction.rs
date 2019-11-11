@@ -1,68 +1,111 @@
-use std::collections::HashMap;
 use super::cpu::Cpu;
 
 pub struct Instruction
 {
-	pub bit_mask:u16,
-	pub id:u16,
-	pub run: fn(&Instruction, &mut Cpu)
+	op_1:u8,
+	op_2:u8,
+	op_3:u8,
+	op_4:u8,       
+	op_234:u16,
+	op_34:u8,
 }
 
-impl Instruction
-{
-	pub fn new(	bit_mask:u16, id:u16, run: fn(&Instruction, &mut Cpu)) -> Instruction
+impl Instruction{
+
+	fn from_opcode(opcode:u16) -> Instruction
 	{
-		Instruction{
-			bit_mask,
-			id,
-			run,
+		Instruction{ 
+			op_1   : (opcode & 0xF000) >> 12,
+			op_2   : (opcode & 0x0F00) >> 8,
+			op_3   : (opcode & 0x00F0) >> 4,
+			op_4   :  opcode & 0x000F,
+			op_234 :  opcode & 0x0FFF,
+			op_34  : (opcode & 0x00FF)
 		}
 	}
-
-	pub fn load() -> HashMap<&'static str,Instruction>
+	fn runOn(&self, cpu:&mut CPU) 
 	{
-		let mut map = HashMap::new();
-		map.insert("00E0_CLS"  , Instruction::new(0xFFFF,0x00E0,|i,cpu| {}) );
-		map.insert("00EE_RET"  , Instruction::new(0xFFFF,0x00EE,|i,cpu| {}) );
-		map.insert("0NNN_SYS"  , Instruction::new(0xF000,0x0000,|i,cpu| {}) );
-		map.insert("1NNN_JMP"  , Instruction::new(0xF000,0x1000,|i,cpu| {}) );
-		map.insert("2NNN_CALL" , Instruction::new(0xF000,0x2000,|i,cpu| {}) );
-		map.insert("3XNN_SE"   , Instruction::new(0xF000,0x3000,|i,cpu| {}) );
-		map.insert("4XNN_SNE"  , Instruction::new(0xF000,0x4000,|i,cpu| {}) );
-		map.insert("5XY0_SE"   , Instruction::new(0xF00F,0x5000,|i,cpu| {}) );
-		map.insert("6XNN_LD"   , Instruction::new(0xF000,0x6000,|i,cpu| {}) );
-		map.insert("7XNN_ADD"  , Instruction::new(0xF000,0x7000,|i,cpu| {}) );
-		map.insert("8XY0_LD"   , Instruction::new(0xF00F,0x8000,|i,cpu| {}) );
-		map.insert("8XY1_OR"   , Instruction::new(0xF00F,0x8001,|i,cpu| {}) );
-		map.insert("8XY2_AND"  , Instruction::new(0xF00F,0x8002,|i,cpu| {}) );
-		map.insert("8XY3_XOR"  , Instruction::new(0xF00F,0x8003,|i,cpu| {}) );
-		map.insert("8XY4_ADD"  , Instruction::new(0xF00F,0x8004,|i,cpu| {}) );
-		map.insert("8XY5_SUB"  , Instruction::new(0xF00F,0x8005,|i,cpu| {}) );
-		map.insert("8XY6_SHR"  , Instruction::new(0xF00F,0x8006,|i,cpu| {}) );
-		map.insert("8XY7_SUBN" , Instruction::new(0xF00F,0x8007,|i,cpu| {}) );
-		map.insert("8XYE_SHL"  , Instruction::new(0xF00F,0x800E,|i,cpu| {}) );
-		map.insert("9XY0_SNE"  , Instruction::new(0xF00F,0x9000,|i,cpu| {}) );
-		map.insert("ANNN_LD"   , Instruction::new(0xF000,0xA000,|i,cpu| {}) );
-		map.insert("BNNN_JMP"  , Instruction::new(0xF000,0xB000,|i,cpu| {}) );
-		map.insert("CXNN_RND"  , Instruction::new(0xF000,0xC000,|i,cpu| {}) );
-		map.insert("DXYN_DRW"  , Instruction::new(0xF000,0xD000,|i,cpu| {}) );
-		map.insert("EX9E_SKP"  , Instruction::new(0xF0FF,0xE09E,|i,cpu| {}) );
-		map.insert("EXA1_SKNP" , Instruction::new(0xF0FF,0xE0A1,|i,cpu| {}) );
-		map.insert("FX07_LD"   , Instruction::new(0xF0FF,0xF007,|i,cpu| {}) );
-		map.insert("FX0A_LD"   , Instruction::new(0xF0FF,0xF00A,|i,cpu| {}) );
-		map.insert("FX15_LD"   , Instruction::new(0xF0FF,0xF015,|i,cpu| {}) );
-		map.insert("FX18_LD"   , Instruction::new(0xF0FF,0xF018,|i,cpu| {}) );
-		map.insert("FX1E_ADD"  , Instruction::new(0xF0FF,0xF01E,|i,cpu| {}) );
-		map.insert("FX29_LD"   , Instruction::new(0xF0FF,0xF029,|i,cpu| {}) );
-		map.insert("FX33_LD"   , Instruction::new(0xF0FF,0xF033,|i,cpu| {}) );
-		map.insert("FX55_LD"   , Instruction::new(0xF0FF,0xF055,|i,cpu| {}) );
-		map.insert("FX65_LD"   , Instruction::new(0xF0FF,0xF065,|i,cpu| {}) );
-
-		return map; 
+		match self.op_1 {
+			1=> {
+				cpu.pc = op_234;
+			},
+			2 => {
+				if cpu.sp >= 16 {panic!("Stack Overflow");}
+				cpu.s[cpu.sp] = cpu.pc;
+				cpu.sp++;
+			},
+			3 => {
+				if cpu.v[self.op_2] == self.op_34 {
+					cpi.pc += 2;
+				}
+			},
+			4 => {
+				if cpu.v[self.op_2] != self.op_34 {
+					cpi.pc += 2;
+				}
+			}, 
+			5 => {
+				if cpu.v[self.op_2] == cpu.v[self.op_3] {
+					cpi.pc += 2;
+				}
+			}, 
+			6 => {
+				cpu.v[self.op_2] = self.op_34;
+			}, 
+			7 => {
+				cpu.v[self.op_2] += self.op_34;
+			}, 
+			8 => {
+				match self.op_4 {
+					0 => {
+						cpu.v[self.op_2] = cpu.v[self.op_3];
+					},
+					1 => {
+						cpu.v[self.op_2] |= cpu.v[self.op_3];
+					},
+					2 => {
+						cpu.v[self.op_2] &= cpu.v[self.op_3];
+					},
+					3 => {
+						cpu.v[self.op_2] = cpu.v[self.op_3];
+					},
+					4 => {
+						cpu.v[self.op_2] += cpu.v[self.op_3];
+						// todo overflow and carry in vf
+					},
+					5 => {
+						cpu.v[self.op_2] -= cpu.v[self.op_3];
+						// todo overflow and carry in vf cf doc not borrow
+					},
+					6 => {
+						cpu.v[self.op_2] <<= 1;
+						// todo overflow and carry in vf
+					},
+					7 => {
+						cpu.v[self.op_2] = cpu.v[self.op_3] - cpu.v[self.op_2];
+						// todo overflow and carry in vf
+					},
+					0xE => {
+						cpu.v[self.op_2] >>= 1;
+						// todo overflow and carry in vf
+					},
+				},
+				9 => {
+					if cpu.v[self.op_2] != cpu.v[self.op_3] {
+						cpi.pc += 2;
+					}
+				},
+				0xA => {
+					cpu.i = self.op_234;
+				},
+				0xB => {
+					cpu.pc = self.op_234 +  cpu.v[0];
+				},
+				0xC => {
+					cpu.v[self.op_2] = 0;
+					// implement rand
+				}
+			}, 
+		}
 	}
 }
-
-
-
-
-
