@@ -1,3 +1,5 @@
+use std::fmt;
+
 pub struct Instruction
 {
 	pub op_1:u8,
@@ -8,7 +10,8 @@ pub struct Instruction
 	pub op_34:u8,
 }
 
-impl Instruction{
+impl Instruction
+{
 
 	pub fn decode(opcode:u16) -> Instruction
 	{
@@ -21,4 +24,13 @@ impl Instruction{
 			op_34  : (  (opcode & 0x00FFu16)         as u8 )
 		}
 	}
+}
+
+
+impl fmt::Display for Instruction {
+
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
+    {
+        write!(f, "0x{:x}{:x}{:x}{:x}",  self.op_1,self.op_2,self.op_3,self.op_4)
+    }
 }

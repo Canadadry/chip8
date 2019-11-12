@@ -23,9 +23,9 @@ pub struct Cpu
 
 impl Cpu
 {
-	pub fn new() -> Cpu
+	pub fn new(width:usize,height:usize) -> Cpu
 	{	
-		Cpu{
+		let mut cpu = Cpu{
 			m:[0;MEMORY_SIZE],
 			v:[0;REGISTER_COUNT],
 			i:0u16,
@@ -36,7 +36,9 @@ impl Cpu
 			pc:0u16,
 			seed:0u32,
 			ppu: Ppu::new()
-		}
+		};
+		cpu.ppu.attach_screen(width,height);
+		return cpu;
 	}
 	
 	pub fn reset(&mut self)
@@ -76,6 +78,8 @@ impl Cpu
 			let it = Instruction::decode(op);
 			self.execute(&it);
 
+			println!("executing {}",it);
+
 			if self.dt>0 { self.dt-=1; }
 			if self.st>0 { self.st-=1; }			
 		}
@@ -101,7 +105,7 @@ impl Cpu
 						self.ppu.clear();
 					}
 					_ => {
-						panic!("Not opcode");
+						panic!("Not opcode {}",instruction);
 					}
 				}
 			},
@@ -169,7 +173,7 @@ impl Cpu
 						// todo overflow and carry in vf
 					}
 					_ => {
-						panic!("Not opcode");
+						panic!("Not opcode {}",instruction);
 					}
 				}
 			},
@@ -186,16 +190,25 @@ impl Cpu
 			},
 			0xC => {
 				self.v[instruction.op_2 as usize] = self.rand() & instruction.op_34;
+			},
+			0xD => {
+				let x = self.v[instruction.op_2 as usize] as usize;
+				let y = self.v[instruction.op_3 as usize] as usize;
+				for i in 0..instruction.op_4
+				{
+					let byte:u8 = self.m[(self.i+i as u16) as usize];
+					self.v[0xF as usize] = self.ppu.draw_byte_at(byte,x,y) as u8;
+				}
 			}
 			_ => {
-				panic!("Not opcode");
+				panic!("Not opcode {}",instruction);
 			}
 		}
 	}
 
 	fn rand(&mut self) -> u8
 	{
-	    self.seed = (self.seed * 1103515245 + 12345) % std::u32::MAX;
+	    self.seed = (self.seed.wrapping_mul(1103515245) + 12345) % std::u32::MAX;
 	    return (self.seed & 0xFFu32) as u8;
 	}
 
