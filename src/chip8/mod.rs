@@ -1,3 +1,3 @@
-pub mod gpu;
-mod cpu;
+mod ppu;
+pub mod cpu;
 mod instruction;

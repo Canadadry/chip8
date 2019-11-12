@@ -1,5 +1,3 @@
-use super::cpu::Cpu;
-
 pub struct Instruction
 {
 	pub op_1:u8,

@@ -1,4 +1,5 @@
 use super::instruction::Instruction;
+use super::ppu::Ppu;
 
 const MEMORY_SIZE:usize    =  4096;
 const START_PC:u16         =  0x200;
@@ -16,6 +17,8 @@ pub struct Cpu
 	st:u8,
 	pc:u16,
 	seed:u32,
+
+	ppu:Ppu
 }
 
 impl Cpu
@@ -31,7 +34,8 @@ impl Cpu
 			dt:0u8,
 			st:0u8,
 			pc:0u16,
-			seed:0u32
+			seed:0u32,
+			ppu: Ppu::new()
 		}
 	}
 	
@@ -46,6 +50,8 @@ impl Cpu
 		self.dt = 0;
 		self.st = 0;
 		self.pc= START_PC;
+
+		self.ppu.clear();
 	}
 
 	pub fn load(&mut self,rom:&Vec<u8>)
@@ -56,15 +62,23 @@ impl Cpu
 			self.m[i + START_PC as usize] = rom[i];
 		}			
 	}
-	
-	pub fn step(&mut self)
-	{
-		let op = self.fetch();
-		let it = Instruction::decode(op);
-		self.execute(&it);
 
-		if self.dt>0 { self.dt-=1; }
-		if self.st>0 { self.st-=1; }
+	pub fn ppu(&self) -> &Ppu
+	{
+		return &self.ppu;
+	}
+	
+	pub fn step(&mut self,cycle:usize)
+	{
+		for _i in 0..cycle
+		{
+			let op = self.fetch();
+			let it = Instruction::decode(op);
+			self.execute(&it);
+
+			if self.dt>0 { self.dt-=1; }
+			if self.st>0 { self.st-=1; }			
+		}
 	}
 
 
@@ -81,6 +95,16 @@ impl Cpu
 	fn execute(&mut self, instruction:&Instruction) 
 	{
 		match instruction.op_1 {
+			0=>{
+				match instruction.op_234 {
+					0x0E0 => {
+						self.ppu.clear();
+					}
+					_ => {
+						panic!("Not opcode");
+					}
+				}
+			},
 			1=> {
 				self.pc = instruction.op_234;
 			},
