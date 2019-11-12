@@ -1,3 +1,5 @@
+use std::fmt;
+
 use super::instruction::Instruction;
 use super::ppu::Ppu;
 
@@ -16,7 +18,6 @@ pub struct Cpu
 	dt:u8,
 	st:u8,
 	pc:u16,
-	seed:u32,
 
 	ppu:Ppu
 }
@@ -34,7 +35,6 @@ impl Cpu
 			dt:0u8,
 			st:0u8,
 			pc:0u16,
-			seed:0u32,
 			ppu: Ppu::new()
 		};
 		cpu.ppu.attach_screen(width,height);
@@ -78,7 +78,7 @@ impl Cpu
 			let it = Instruction::decode(op);
 			self.execute(&it);
 
-			println!("executing {}",it);
+			// println!("executing {}",it);
 
 			if self.dt>0 { self.dt-=1; }
 			if self.st>0 { self.st-=1; }			
@@ -189,27 +189,43 @@ impl Cpu
 				self.pc = instruction.op_234 + self.v[0] as u16;
 			},
 			0xC => {
-				self.v[instruction.op_2 as usize] = self.rand() & instruction.op_34;
+				self.v[instruction.op_2 as usize] = rand::random::<u8>() & instruction.op_34;
 			},
 			0xD => {
 				let x = self.v[instruction.op_2 as usize] as usize;
 				let y = self.v[instruction.op_3 as usize] as usize;
+				let mut collide:bool = false;
 				for i in 0..instruction.op_4
 				{
 					let byte:u8 = self.m[(self.i+i as u16) as usize];
-					self.v[0xF as usize] = self.ppu.draw_byte_at(byte,x,y) as u8;
+					collide = collide || self.ppu.draw_byte_at(byte,x,y+(i as usize));
 				}
+				self.v[0xF as usize] = if collide { 1u8 }  else { 0u8 };
 			}
 			_ => {
 				panic!("Not opcode {}",instruction);
 			}
 		}
 	}
+}
 
-	fn rand(&mut self) -> u8
-	{
-	    self.seed = (self.seed.wrapping_mul(1103515245) + 12345) % std::u32::MAX;
-	    return (self.seed & 0xFFu32) as u8;
-	}
 
+impl fmt::Display for Cpu {
+
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result 
+    {
+        write!(f, "V0:0x{:x} V1:0x{:x} V2:0x{:x} V3:0x{:x} \n", self.v[0] ,self.v[1] ,self.v[2] ,self.v[3] ).unwrap();
+        write!(f, "V4:0x{:x} V5:0x{:x} V6:0x{:x} V7:0x{:x} \n", self.v[4] ,self.v[5] ,self.v[6] ,self.v[7] ).unwrap();
+        write!(f, "V8:0x{:x} V9:0x{:x} VA:0x{:x} VB:0x{:x} \n", self.v[8] ,self.v[9] ,self.v[10],self.v[8] ).unwrap();
+        write!(f, "VC:0x{:x} VD:0x{:x} VE:0x{:x} VF:0x{:x} \n", self.v[12],self.v[13],self.v[14],self.v[15]).unwrap();
+
+        write!(f, "I:0x{:x} DT:{:x} ST:{:x} PC:0x{:x} SP:{:x} \n", self.i,self.dt,self.st, self.pc,self.sp).unwrap();
+
+        write!(f, "S0:0x{:x} S1:0x{:x} S2:0x{:x} S3:0x{:x} \n", self.s[0] ,self.s[1] ,self.s[2] ,self.s[3] ).unwrap();
+        write!(f, "S4:0x{:x} S5:0x{:x} S6:0x{:x} S7:0x{:x} \n", self.s[4] ,self.s[5] ,self.s[6] ,self.s[7] ).unwrap();
+        write!(f, "S8:0x{:x} S9:0x{:x} SA:0x{:x} SB:0x{:x} \n", self.s[8] ,self.s[9] ,self.s[10],self.s[8] ).unwrap();
+        write!(f, "SC:0x{:x} SD:0x{:x} SE:0x{:x} SF:0x{:x} \n", self.s[12],self.s[13],self.s[14],self.s[15]).unwrap();
+
+        return Ok(());
+    }
 }

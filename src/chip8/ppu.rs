@@ -35,14 +35,14 @@ impl Ppu{
 		let pos:usize = x+y*SCREEN_WIDTH;
 		let mut ret:bool = false;
 
-		for i in 0..8
+		for i in 0..4
 		{
 			if (x+i)>=SCREEN_WIDTH {return false};
 			let mask = 0x1<<(7-i);
 			let last = self.pixels[pos+i];
 			let new  = last ^ ((byte &  mask)==mask);
 			self.pixels[pos+i] = new;
-			self.update_pixel(x,y,new);
+			self.update_pixel(x+(i as usize),y,new);
 
 			ret = ret || ( last && new );
 		}
@@ -69,6 +69,9 @@ impl Ppu{
 		self.pixel_width  = width  / SCREEN_WIDTH;
 		self.pixel_height = height / SCREEN_HEIGHT;
 
+		// println!("rw {:?}, rh {:?}",self.real_width,self.real_height );
+		// println!("sw {:?}, sh {:?}",self.pixel_width,self.pixel_width );
+
 		self.buffer.resize(width*height,color::BLACK);
 	}
 
@@ -84,15 +87,17 @@ impl Ppu{
 
 		for i in 0..self.pixel_width
 		{
-			for j in 0..self.pixel_width
+			for j in 0..self.pixel_height
 			{
 				let pos_x = i + start_x;
-				let pos_y = y + start_y;
+				let pos_y = j + start_y;
 				let pos   = pos_x + pos_y * self.real_width;
 
 				self.buffer[pos] = if pixel { color::WHITE } else { color::BLACK };
+				// println!("write in buff {:?} at {:?},{:?} => {:?}", pixel,x,y,pos);
 			}
-		}	
+		}
+		// println!(" ");	
 	}	
 
 }

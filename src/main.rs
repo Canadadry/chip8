@@ -29,16 +29,25 @@ fn main() {
     cpu.reset();
     cpu.load(&load_rom("rom/MAZE.ch8").unwrap());
 
+    let mut play = false;
+
     let sixiteen_millis = time::Duration::from_millis(16);
     while window.is_open() && !window.is_key_down(Key::Escape)
     {
         let start = time::Instant::now();
-        if window.is_key_pressed(Key::Space,KeyRepeat::No) {
+        if window.is_key_pressed(Key::Enter,KeyRepeat::No) {
+            play = !play;
+        }
+        if window.is_key_pressed(Key::Space,KeyRepeat::No) && !play {
             cpu.step(1);
+            println!("{}",cpu);
+        }
+        if play {
+            cpu.step(20);
         }
         let end = time::Instant::now();
         thread::sleep(sixiteen_millis-(end-start));
-        
+
         window.update_with_buffer(cpu.ppu().buffer()).unwrap();
     }
 }
