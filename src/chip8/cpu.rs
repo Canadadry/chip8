@@ -2,6 +2,7 @@ use std::fmt;
 
 use super::instruction::Instruction;
 use super::ppu::Ppu;
+use super::font;
 
 const MEMORY_SIZE:usize    =  4096;
 const START_PC:u16         =  0x200;
@@ -37,6 +38,7 @@ impl Cpu
 			pc:0u16,
 			ppu: Ppu::new()
 		};
+		font::load_at(&mut cpu.m,0);
 		cpu.ppu.attach_screen(width,height);
 		return cpu;
 	}
@@ -47,6 +49,8 @@ impl Cpu
 		for i in 0..self.v.len() { self.v[i] = 0u8; }
 		for i in 0..self.s.len() { self.s[i] = 0u16; }
 		
+		font::load_at(&mut self.m,0);
+
 		self.i=0;
 		self.sp = 0;
 		self.dt = 0;
@@ -96,21 +100,21 @@ impl Cpu
 		return opcode;
 	}
 	
-	fn execute(&mut self, instruction:&Instruction) 
+	fn execute(&mut self, inst:&Instruction) 
 	{
-		match instruction.op_1 {
+		match inst.op_1 {
 			0=>{
-				match instruction.op_234 {
+				match inst.op_234 {
 					0x0E0 => {
 						self.ppu.clear();
 					}
 					_ => {
-						panic!("Not opcode {}",instruction);
+						panic!("Not opcode {}",inst);
 					}
 				}
 			},
 			1=> {
-				self.pc = instruction.op_234;
+				self.pc = inst.op_234;
 			},
 			2 => {
 				if self.sp >= 16 {panic!("Stack Overflow");}
@@ -118,92 +122,109 @@ impl Cpu
 				self.sp+=1;
 			},
 			3 => {
-				if self.v[instruction.op_2 as usize] == instruction.op_34 {
+				if self.v[inst.op_2 as usize] == inst.op_34 {
 					self.pc += 2;
 				}
 			},
 			4 => {
-				if self.v[instruction.op_2 as usize] != instruction.op_34 {
+				if self.v[inst.op_2 as usize] != inst.op_34 {
 					self.pc += 2;
 				}
 			}, 
 			5 => {
-				if self.v[instruction.op_2 as usize] == self.v[instruction.op_3 as usize] {
+				if self.v[inst.op_2 as usize] == self.v[inst.op_3 as usize] {
 					self.pc += 2;
 				}
 			}, 
 			6 => {
-				self.v[instruction.op_2 as usize] = instruction.op_34;
+				self.v[inst.op_2 as usize] = inst.op_34;
 			}, 
 			7 => {
-				self.v[instruction.op_2 as usize] += instruction.op_34;
+				self.v[inst.op_2 as usize] += inst.op_34;
 			}, 
 			8 => {
-				match instruction.op_4 {
+				match inst.op_4 {
 					0 => {
-						self.v[instruction.op_2 as usize] = self.v[instruction.op_3 as usize];
+						self.v[inst.op_2 as usize] = self.v[inst.op_3 as usize];
 					},
 					1 => {
-						self.v[instruction.op_2 as usize] |= self.v[instruction.op_3 as usize];
+						self.v[inst.op_2 as usize] |= self.v[inst.op_3 as usize];
 					},
 					2 => {
-						self.v[instruction.op_2 as usize] &= self.v[instruction.op_3 as usize];
+						self.v[inst.op_2 as usize] &= self.v[inst.op_3 as usize];
 					},
 					3 => {
-						self.v[instruction.op_2 as usize] = self.v[instruction.op_3 as usize];
+						self.v[inst.op_2 as usize] = self.v[inst.op_3 as usize];
 					},
 					4 => {
-						self.v[instruction.op_2 as usize] += self.v[instruction.op_3 as usize];
-						// todo overflow and carry in vf
+						let vx =  self.v[inst.op_2 as usize] as u16;
+						let vy =  self.v[inst.op_3 as usize] as u16; 
+						let result = vx + vy;
+						self.v[inst.op_2 as usize] = result as u8;
+						self.v[0xF] =  if result > 0xFF { 1 } else { 0 };
 					},
 					5 => {
-						self.v[instruction.op_2 as usize] -= self.v[instruction.op_3 as usize];
-						// todo overflow and carry in vf cf doc not borrow
+						self.v[0xF] = if self.v[inst.op_2 as usize] > self.v[inst.op_3 as usize] { 1 } else { 0 };
+						self.v[inst.op_2 as usize] = self.v[inst.op_2 as usize].wrapping_sub(self.v[inst.op_3 as usize]);
 					},
 					6 => {
-						self.v[instruction.op_2 as usize] <<= 1;
-						// todo overflow and carry in vf
+						let vx = self.v[inst.op_2 as usize];
+						self.v[0xF] =  if vx & 0x1 == 0x1 { 1 } else { 0 };
+						self.v[inst.op_2 as usize] = vx >> 1;
 					},
 					7 => {
-						self.v[instruction.op_2 as usize] = self.v[instruction.op_3 as usize] - self.v[instruction.op_2 as usize];
-						// todo overflow and carry in vf
+						self.v[0xF] = if self.v[inst.op_2 as usize] < self.v[inst.op_3 as usize] { 1 } else { 0 };
+						self.v[inst.op_2 as usize] = self.v[inst.op_3 as usize].wrapping_sub(self.v[inst.op_2 as usize]);
 					},
 					0xE => {
-						self.v[instruction.op_2 as usize] >>= 1;
-						// todo overflow and carry in vf
+
+						let vx = self.v[inst.op_2 as usize] as u16;
+						let result  = vx << 1; 
+						self.v[inst.op_2 as usize] = result as u8;
+						self.v[0xF] =  if result > 0xFF { 1 } else { 0 };
 					}
 					_ => {
-						panic!("Not opcode {}",instruction);
+						panic!("Not opcode {}",inst);
 					}
 				}
 			},
 			9 => {
-				if self.v[instruction.op_2 as usize] != self.v[instruction.op_3 as usize] {
+				if self.v[inst.op_2 as usize] != self.v[inst.op_3 as usize] {
 					self.pc += 2;
 				}
 			},
 			0xA => {
-				self.i = instruction.op_234;
+				self.i = inst.op_234;
 			},
 			0xB => {
-				self.pc = instruction.op_234 + self.v[0] as u16;
+				self.pc = inst.op_234 + self.v[0] as u16;
 			},
 			0xC => {
-				self.v[instruction.op_2 as usize] = rand::random::<u8>() & instruction.op_34;
+				self.v[inst.op_2 as usize] = rand::random::<u8>() & inst.op_34;
 			},
 			0xD => {
-				let x = self.v[instruction.op_2 as usize] as usize;
-				let y = self.v[instruction.op_3 as usize] as usize;
+				let x = self.v[inst.op_2 as usize] as usize;
+				let y = self.v[inst.op_3 as usize] as usize;
 				let mut collide:bool = false;
-				for i in 0..instruction.op_4
+				for i in 0..inst.op_4
 				{
 					let byte:u8 = self.m[(self.i+i as u16) as usize];
 					collide = collide || self.ppu.draw_byte_at(byte,x,y+(i as usize));
 				}
 				self.v[0xF as usize] = if collide { 1u8 }  else { 0u8 };
-			}
+			},
+			0xF => {
+				match inst.op_34 {
+					0x29 => {
+						self.i = (self.v[inst.op_2 as usize] as u16) * 5;
+					},
+					_ => {
+						panic!("Not opcode {}",inst);
+					}
+				}
+			},
 			_ => {
-				panic!("Not opcode {}",instruction);
+				panic!("Not opcode {}",inst);
 			}
 		}
 	}
