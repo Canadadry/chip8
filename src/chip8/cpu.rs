@@ -4,6 +4,9 @@ use super::instruction::Instruction;
 use super::ppu::Ppu;
 use super::font;
 
+
+use r_tui::sub_screen;
+
 const MEMORY_SIZE:usize    =  4096;
 const START_PC:u16         =  0x200;
 const REGISTER_COUNT:usize =  16;
@@ -39,7 +42,6 @@ impl Cpu
 			ppu: Ppu::new()
 		};
 		font::load_at(&mut cpu.m,0);
-		cpu.ppu.attach_screen(width,height);
 		return cpu;
 	}
 	
@@ -68,25 +70,29 @@ impl Cpu
 			self.m[i + START_PC as usize] = rom[i];
 		}			
 	}
-
-	pub fn ppu(&self) -> &Ppu
-	{
-		return &self.ppu;
-	}
 	
 	pub fn step(&mut self,cycle:usize)
 	{
+		self.ppu.updates.clear();
 		for _i in 0..cycle
 		{
 			let op = self.fetch();
 			let it = Instruction::decode(op);
 			self.execute(&it);
 
-			// println!("executing {}",it);
-
 			if self.dt>0 { self.dt-=1; }
 			if self.st>0 { self.st-=1; }			
 		}
+	}
+
+	pub fn need_refresh(&self) -> bool
+	{
+		return self.ppu.updates.len()>0;
+	}
+
+	pub fn refresh(&mut self, sub:sub_screen::SubScreen, buf:&mut Vec<u32>,factor:usize)
+	{
+		self.ppu.refresh(sub,buf,factor);
 	}
 
 

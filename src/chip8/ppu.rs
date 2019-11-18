@@ -1,19 +1,12 @@
-
-mod color{
-	pub const WHITE:u32 = 0xffffff;
-	pub const BLACK:u32 = 0x000000;
-}
+use r_tui::sub_screen;
+use r_tui::color_table;
 
 const SCREEN_WIDTH:usize  = 64;
 const SCREEN_HEIGHT:usize = 32;
 
 pub struct Ppu{
 	pixels: [bool; SCREEN_WIDTH*SCREEN_HEIGHT],
-	real_width:usize,
-	real_height:usize,
-	pixel_width:usize,
-	pixel_height:usize,
-	buffer:Vec<u32>
+	pub updates: Vec<(usize,bool)>
 }
 
 impl Ppu{
@@ -21,11 +14,7 @@ impl Ppu{
 	pub fn new() -> Ppu{
 		Ppu{
 			pixels:[false; SCREEN_WIDTH*SCREEN_HEIGHT],
-			real_width:0,
-			real_height:0,
-			pixel_width:0,
-			pixel_height:0,
-			buffer: vec![]
+			updates: vec![]
 		}
 	}
 
@@ -52,53 +41,28 @@ impl Ppu{
 
 	pub fn clear(&mut self)
 	{
+		self.updates.clear();
 		for i in 0..self.pixels.len()
 		{
 			self.pixels[i] = false;
-		}		
-		for i in 0..self.buffer.len()
-		{
-			self.buffer[i] = color::BLACK;
-		}
-	}
-
-	pub fn attach_screen(&mut self,width:usize,height:usize)
-	{
-		self.real_width   = width;
-		self.real_height  = height;
-		self.pixel_width  = width  / SCREEN_WIDTH;
-		self.pixel_height = height / SCREEN_HEIGHT;
-
-		// println!("rw {:?}, rh {:?}",self.real_width,self.real_height );
-		// println!("sw {:?}, sh {:?}",self.pixel_width,self.pixel_width );
-
-		self.buffer.resize(width*height,color::BLACK);
-	}
-
-	pub fn buffer(&self) -> &Vec<u32>
-	{
-		return &self.buffer;
+			self.updates.push((i,false));	
+		}	
 	}
 
 	fn update_pixel(&mut self,x:usize,y:usize,pixel:bool)
 	{
-		let start_x = x*self.pixel_width;
-		let start_y = y*self.pixel_height;
-
-		for i in 0..self.pixel_width
-		{
-			for j in 0..self.pixel_height
-			{
-				let pos_x = i + start_x;
-				let pos_y = j + start_y;
-				let pos   = pos_x + pos_y * self.real_width;
-
-				self.buffer[pos] = if pixel { color::WHITE } else { color::BLACK };
-				// println!("write in buff {:?} at {:?},{:?} => {:?}", pixel,x,y,pos);
-			}
-		}
-		// println!(" ");	
+		self.updates.push((x+y*SCREEN_WIDTH,pixel));	
 	}	
+
+	pub fn refresh(&mut self, sub:sub_screen::SubScreen, buf:&mut Vec<u32>,factor:usize)
+	{
+		for p in sub
+		{
+			let pos = p.0/factor+p.1/factor*SCREEN_WIDTH;
+			buf[p.2] = if self.pixels[pos] {color_table::WHITE} else {color_table::BLACK}
+		}
+
+	}
 
 }
 
