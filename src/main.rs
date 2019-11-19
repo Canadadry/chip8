@@ -30,6 +30,60 @@ fn load_rom (filename: &str) -> std::io::Result<Vec<u8>>
 	return Ok(data);
 }
 
+impl chip8::cpu::Cpu
+{
+	pub fn display_reg(&self,view:&mut view::View)
+	{
+		view.stream(format!(" "));
+		for i in 0..0x10
+		{
+			view.color(color_table::BLACK,color_table::RED);
+			view.stream(format!("V[{:2}]:",i));
+			view.color(color_table::BLACK,color_table::WHITE);
+			view.stream(format!("{:02X} ",self.v[i]));
+
+			if (i+1)%4 == 0 && i>0 { view.stream(format!("\n "));}
+		}
+		view.stream(format!("\n "));
+		for i in 0..0x10
+		{
+			view.color(color_table::BLACK,color_table::YELLOW);
+			view.stream(format!("S[{:2}]:",i));
+			view.color(color_table::BLACK,color_table::WHITE);
+			view.stream(format!("{:04X} ",self.v[i]));
+
+			if (i+1)%4 == 0 && i>0 { view.stream(format!("\n "));}
+		}
+		view.stream(format!("\n "));
+
+		view.color(color_table::BLACK,color_table::GREEN);
+		view.stream(format!("I:"));
+		view.color(color_table::BLACK,color_table::WHITE);
+		view.stream(format!("{:04X} ",self.i));
+
+		view.color(color_table::BLACK,color_table::GREEN);
+		view.stream(format!("SP:"));
+		view.color(color_table::BLACK,color_table::WHITE);
+		view.stream(format!("{:>2} ",self.sp));
+
+		view.color(color_table::BLACK,color_table::GREEN);
+		view.stream(format!("DT:"));
+		view.color(color_table::BLACK,color_table::WHITE);
+		view.stream(format!("{:>3} ",self.dt));
+
+		view.color(color_table::BLACK,color_table::GREEN);
+		view.stream(format!("ST:"));
+		view.color(color_table::BLACK,color_table::WHITE);
+		view.stream(format!("{:>3} ",self.st));
+
+		view.color(color_table::BLACK,color_table::GREEN);
+		view.stream(format!("PC:"));
+		view.color(color_table::BLACK,color_table::WHITE);
+		view.stream(format!("{:04X} ",self.pc));
+	}
+
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let romfile = args.get(1).unwrap_or_else(|| {panic!("You must specify a rom file tu load");});
@@ -54,6 +108,7 @@ fn main() {
         }
         if window.is_key_pressed(Key::Space,KeyRepeat::No) && !play {
             cpu.step(1);
+            cpu.display_reg(&mut reg_view);
 			reg_view.apply(&mut screen);
             println!("{}",cpu);
         }
@@ -63,6 +118,7 @@ fn main() {
             {
 	            cpu.refresh(screen.sub(0,64*FACTOR,0,32*FACTOR).unwrap(),screen.buffer_mut(),FACTOR);
             }
+            cpu.display_reg(&mut reg_view);
 			reg_view.apply(&mut screen);
         }
 

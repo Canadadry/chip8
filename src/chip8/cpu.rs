@@ -14,14 +14,14 @@ const STACK_SIZE:usize     =  16;
 
 pub struct Cpu 
 {	
-	m:[u8; MEMORY_SIZE],
-	v:[u8; REGISTER_COUNT],
-	i:u16,
-	s:[u16; STACK_SIZE],
-	sp:u8,
-	dt:u8,
-	st:u8,
-	pc:u16,
+	pub m:[u8; MEMORY_SIZE],
+	pub v:[u8; REGISTER_COUNT],
+	pub i:u16,
+	pub s:[u16; STACK_SIZE],
+	pub sp:u8,
+	pub dt:u8,
+	pub st:u8,
+	pub pc:u16,
 
 	ppu:Ppu
 }
